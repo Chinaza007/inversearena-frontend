@@ -103,6 +103,9 @@ export const cacheKeys = {
   arenaSnapshotMeta: (arenaId: string) => `arena:${getNetworkIdentity()}:snapshot:meta:${arenaId}`,
   /** #1500: verified full snapshot payload with version generation. Includes network identity (#1522). */
   arenaVerifiedSnapshot: (arenaId: string) => `arena:${getNetworkIdentity()}:snapshot:verified:${arenaId}`,
+  /** Per-arena yield series (#1568) — DB-derived, not ledger state. */
+  arenaYield: (arenaId: string, limit: number, cursor: string) =>
+    `arena:${getNetworkIdentity()}:yield:${arenaId}:${limit}:${cursor}`,
 };
 
 /**
@@ -129,6 +132,7 @@ export const cacheTTL = {
   ORACLE_YIELD: 60,
   ARENA_STATS: 15,
   ARENA_ROUNDS: 10,
+  ARENA_YIELD: 60,
   ARENA_LIST: 30,
   LEADERBOARD: 30,
   // Deliberately long: this is "how far back may a degraded response reach",

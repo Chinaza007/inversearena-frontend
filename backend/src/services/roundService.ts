@@ -34,6 +34,8 @@ import {
   getArenaOracleContract,
   getOracleReading,
 } from './onChainReader';
+import { NotificationPreferencesService } from './notificationPreferencesService';
+import { PushService } from './pushService';
 import { getStellarConfig, type StellarConfig } from '../config/stellarConfig';
 import { buildRoundResolution } from '../domain/roundResolution';
 import { contextLogger, maskWalletAddress } from '../utils/logger';
@@ -139,11 +141,14 @@ export class RoundService {
   private resolvedStellarConfig: StellarConfig | undefined;
   private idempotentCommands: IdempotentCommandRepository;
 
+  private pushService: PushService | null = null;
+
   constructor(
     private prisma: PrismaClient,
     stellarConfig?: StellarConfig,
     onChainReader?: OnChainReader,
     private stellarRpcGateway: StellarRpcGateway = new StellarRpcGateway(),
+    pushService?: PushService,
   ) {
     this.roundRepo = new RoundRepository(prisma);
     this.onChainReader = onChainReader ?? new SorobanOnChainReader();
@@ -152,6 +157,43 @@ export class RoundService {
     this.oracleFreshnessService = new OracleFreshnessService(this.onChainReader);
     this.explicitStellarConfig = stellarConfig;
     this.idempotentCommands = new IdempotentCommandRepository(prisma);
+    if (pushService) this.pushService = pushService;
+  }
+
+
+  /**
+   * Best-effort Web Push fan-out after a round resolves (#1571): alerts the
+   * round's players that the next commit window is opening. Never throws —
+   * resolution must not fail because push is unconfigured or unreachable.
+   */
+  private async notifyRoundResolved(
+    arenaId: string,
+    roundNumber: number,
+    userIds: string[],
+  ): Promise<void> {
+    try {
+      if (!this.pushService) {
+        if (!process.env.VAPID_PUBLIC_KEY) return;
+        this.pushService = new PushService(
+          this.prisma,
+          new NotificationPreferencesService(this.prisma),
+        );
+      }
+      await this.pushService.scheduleRoundPhasePushes({
+        arenaId,
+        roundNumber,
+        type: "round-started",
+        message: {
+          title: "Round resolved",
+          body: `Round ${roundNumber} resolved — the next commit window is opening.`,
+          url: `/arena/${arenaId}`,
+          tag: `arena-${arenaId}-round-${roundNumber}-started`,
+        },
+        userIds,
+      });
+    } catch {
+      // Push is advisory; resolution already succeeded.
+    }
   }
 
   /**
@@ -172,6 +214,7 @@ export class RoundService {
       this.resolvedStellarConfig = this.explicitStellarConfig ?? getStellarConfig();
     }
     return this.resolvedStellarConfig;
+
   }
 
   /**
@@ -424,6 +467,9 @@ export class RoundService {
       // immediately rather than after the TTL. Best-effort — a Redis outage
       // must not fail an otherwise-successful resolution.
       await invalidateArenaStats(round.arenaId).catch(() => {});
+
+      // Best-effort round phase push fan-out (#1571); never fails resolution.
+      void this.notifyRoundResolved(round.arenaId, round.roundNumber, input.allActivePlayerIds).catch(() => {});
 
       const duration = (Date.now() - start) / 1000;
       roundResolutionDuration.observe(duration);

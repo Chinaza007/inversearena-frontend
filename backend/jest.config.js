@@ -29,6 +29,8 @@ module.exports = {
     "<rootDir>/tests/authDeviceSessions\\.unit\\.test\\.ts",
     "<rootDir>/tests/onChainReader\\.snapshot\\.unit\\.test\\.ts",
     "<rootDir>/tests/payoutsReceipt\\.unit\\.test\\.ts",
+    "<rootDir>/tests/arenaYield\\.unit\\.test\\.ts",
+    "<rootDir>/tests/pushService\\.unit\\.test\\.ts",
     "<rootDir>/tests/contractCapability\\.integration\\.unit\\.test\\.ts",
     "<rootDir>/tests/roundProofBundle\\.route\\.unit\\.test\\.ts",
     "<rootDir>/tests/onChainReader\\.factoryArenaPage\\.unit\\.test\\.ts",
