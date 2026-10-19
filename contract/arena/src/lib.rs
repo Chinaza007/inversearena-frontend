@@ -5057,3 +5057,5 @@ mod lobby_tests;
 mod player_status_tests;
 #[cfg(test)]
 mod global_pause_tests;
+#[cfg(test)]
+mod commitment_vectors;
