@@ -3,6 +3,7 @@
 //! Manages the full game lifecycle: player registration, commit-reveal rounds,
 //! yield accounting via an RWA vault adapter, winner payout, and admin controls.
 #![no_std]
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 use soroban_sdk::{
     Address, Bytes, BytesN, Env, IntoVal, Symbol, Vec,
     auth::{ContractContext, InvokerContractAuthEntry, SubContractInvocation},
@@ -27,7 +28,7 @@ use types::{
     ArenaConfig, ArenaError, ArenaStatus, Choice, EliminationReason, GameState, LeaderboardEntry,
     OracleFreshnessPolicy, PendingAdmin, PendingUpgrade, PlayerState, PlayerStatus, RoundResult,
     Settlement, YieldSnapshot,
-    TransitionInitiator, YieldSnapshot,
+    TransitionInitiator,
 };
 
 #[soroban_sdk::contractclient(name = "FactoryClient")]
@@ -1749,6 +1750,7 @@ fn build_leaderboard(env: &Env) {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod test {
     use super::*;
     use soroban_sdk::{
@@ -2641,6 +2643,7 @@ mod test {
         let (env, client, _resolve_ts) = setup_started_with_oracle_age(0);
         client.resolve_round();
         let events = env.events().all();
+        // #1607: topic = ("arena", "orc_fresh"); data = (v, round, class, age).
         let has_freshness_event = events
             .iter()
             .any(|(contract, topics, _data)| {
@@ -5159,6 +5162,7 @@ mod player_status_tests;
 #[cfg(test)]
 mod global_pause_tests;
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod commitment_vectors;
 #[cfg(test)]
 mod temp_storage_tests;
